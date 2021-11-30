@@ -1,0 +1,8 @@
+.idea
+taskmaneger/main/__pycache__/
+taskmaneger/main/migrations/__pycache__/
+taskmaneger/taskmaneger/__pycache__/
+*.log
+*.pot
+*.pyc
+taskmaneger/db.sqlite3
