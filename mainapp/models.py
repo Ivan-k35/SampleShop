@@ -1,19 +1,16 @@
-from PIL import Image
 from django.db import models
 from django.contrib.auth import get_user_model
 from django.contrib.contenttypes.models import ContentType
 from django.contrib.contenttypes.fields import GenericForeignKey
+from django.urls import reverse
 
 
 user = get_user_model()
 
 
-class MinResolutionErrorException(Exception):
-    pass
-
-
-class MaxResolutionErrorException(Exception):
-    pass
+def get_product_url(obj, viewname):
+    ct_model = obj.__class__._meta.model_name
+    return reverse(viewname, kwargs={'ct_model': ct_model, 'slug': obj.slug})
 
 
 class LatestProductManager:
@@ -53,10 +50,6 @@ class Category(models.Model):
 
 class Product(models.Model):
 
-    MIN_RESOLUTION = (400, 400)
-    MAX_RESOLUTION = (1200, 1200)
-    MAX_IMAGE_SIZE = 3145728
-
     class Meta:
         abstract = True
 
@@ -69,17 +62,6 @@ class Product(models.Model):
 
     def __str__(self):
         return self.title
-
-    def save(self, *args, **kwargs):
-        image = self.image
-        img = Image.open(image)
-        min_height, min_width = self.MIN_RESOLUTION
-        max_height, max_width = self.MAX_RESOLUTION
-        if img.height < min_height or img.width < min_width:
-            raise MinResolutionErrorException('Разрешение изображения меньше минимального')
-        if img.height > max_height or img.width > max_width:
-            raise MaxResolutionErrorException('Разрешение изображения больше максимального')
-        return image
 
 
 class Notebook(Product):
@@ -94,6 +76,9 @@ class Notebook(Product):
     def __str__(self):
         return "{} : {}".format(self.category.name, self.title)
 
+    def get_absolute_url(self):
+        return get_product_url(self, 'product_detail')
+
 
 class Smartphone(Product):
 
@@ -107,6 +92,9 @@ class Smartphone(Product):
 
     def __str__(self):
         return "{} : {}".format(self.category.name, self.title)
+
+    def get_absolute_url(self):
+        return get_product_url(self, 'product_detail')
 
 
 class CartProduct(models.Model):
