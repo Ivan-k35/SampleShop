@@ -87,6 +87,10 @@ class Smartphone(Product):
     resolution = models.CharField(max_length=255, verbose_name='Разрешение дисплея')
     accum_volume = models.CharField(max_length=255, verbose_name='Емкость аккумулятора')
     ram = models.CharField(max_length=255, verbose_name='Оперативная память')
+    sd = models.BooleanField(default=False, verbose_name='Наличие карты памяти')
+    sd_volume_max = models.CharField(
+        max_length=255, null=True, blank=True, verbose_name='Максимальный объем карты памяти'
+    )
     main_cam_mp = models.CharField(max_length=255, verbose_name='Основная камера')
     front_cam_mp = models.CharField(max_length=255, verbose_name='Фронтальная камера')
 
@@ -99,7 +103,7 @@ class Smartphone(Product):
 
 class CartProduct(models.Model):
     user = models.ForeignKey('Customer', verbose_name='Покупатель', on_delete=models.CASCADE)
-    cart = models.ForeignKey('Cart', verbose_name='Корзина', on_delete=models.CASCADE, related_name='related_product')
+    cart = models.ForeignKey('Cart', verbose_name='Корзина', on_delete=models.CASCADE, related_name='related_products')
     content_type = models.ForeignKey(ContentType, on_delete=models.CASCADE)
     object_id = models.PositiveIntegerField()
     content_object = GenericForeignKey('content_type', 'object_id')
@@ -107,7 +111,7 @@ class CartProduct(models.Model):
     final_price = models.DecimalField(max_digits=9, decimal_places=2, verbose_name='Общая цена')
 
     def __str__(self):
-        return "Продукт: {} (для корзины)".format(self.product.title)
+        return "Продукт: {} (для корзины)".format(self.content_object.title)
 
 
 class Cart(models.Model):
@@ -116,6 +120,8 @@ class Cart(models.Model):
     products = models.ManyToManyField(CartProduct, blank=True, related_name='related_cart')
     total_products = models.PositiveIntegerField(default=0)
     final_price = models.DecimalField(max_digits=9, decimal_places=2, verbose_name='Общая цена')
+    in_order = models.BooleanField(default=False)
+    for_anonymous_user = models.BooleanField(default=False)
 
     def __str__(self):
         return str(self.id)
