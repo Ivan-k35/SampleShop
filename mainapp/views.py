@@ -1,11 +1,18 @@
 from django.shortcuts import render
-from django.views.generic import DetailView
+from django.views.generic import DetailView, View
 
-from .models import Notebook, Smartphone
+from .models import Notebook, Smartphone, LatestProducts
 
 
-def test_view(request):
-    return render(request, 'mainapp/base.html', {})
+class BaseView(View):
+
+    @staticmethod
+    def get(request, *args, **kwargs):
+        products = LatestProducts.objects.get_products_for_main_page('notebook', 'smartphone')
+        context = {
+            'products': products
+        }
+        return render(request, 'mainapp/base.html', context)
 
 
 class ProductDetailView(DetailView):
