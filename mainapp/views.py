@@ -1,21 +1,24 @@
 from django.shortcuts import render
 from django.views.generic import DetailView, View
+from django.http import HttpResponseRedirect
+from django.contrib.contenttypes.models import ContentType
 
-from .models import Notebook, Smartphone, LatestProducts
+from .models import Notebook, Smartphone, LatestProducts, CartProduct
+from .mixins import CartMixin
 
 
-class BaseView(View):
+class BaseView(CartMixin, View):
 
-    @staticmethod
-    def get(request, *args, **kwargs):
+    def get(self, request, *args, **kwargs):
         products = LatestProducts.objects.get_products_for_main_page('notebook', 'smartphone')
         context = {
-            'products': products
+            'products': products,
+            'cart': self.cart
         }
         return render(request, 'mainapp/base.html', context)
 
 
-class ProductDetailView(DetailView):
+class ProductDetailView(CartMixin, DetailView):
 
     CT_MODEL_MODEL_CLASS = {
         'notebook': Notebook,
@@ -27,8 +30,35 @@ class ProductDetailView(DetailView):
         self.queryset = self.model._base_manager.all()
         return super().dispatch(request, *args, **kwargs)
 
-    # model = Model
-    # queryset = Model.objects.all()
     context_object_name = 'product'
     template_name = 'mainapp/product_detail.html'
     slug_url_kwarg = 'slug'
+
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        context['ct_model'] = self.model._meta.model_name
+        return context
+
+
+class AddToCartView(CartMixin, View):
+
+    def get(self, request, *args, **kwargs):
+        ct_model, product_slug = kwargs.get('ct_model'), kwargs.get('slug')
+        content_type = ContentType.objects.get(model=ct_model)
+        product = content_type.model_class().objects.get(slug=product_slug)
+        cart_product, created = CartProduct.objects.get_or_create(
+            user=self.cart.owner, cart=self.cart, content_type=content_type, object_id=product.id
+        )
+        if created:
+            self.cart.products.add(cart_product)
+        self.cart.save()
+        return HttpResponseRedirect('/cart/')
+
+
+class CartView(CartMixin, View):
+
+    def get(self, request, *args, **kwargs):
+        context = {
+            'cart': self.cart
+        }
+        return render(request, 'mainapp/cart.html', context)
